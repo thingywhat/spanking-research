@@ -1,29 +1,30 @@
 #+STARTUP: hidestars
 #+AUTHOR: thingywhat
-#+TITLE: Spanking Science! Finding a formula to model a spanking.
+#+TITLE: Finding a formula to model a spanking.
 
-Spankos exist, and they happen to like making spanking
-simulators... I happen to be one of them.
+I am in the process of developing a spanking simulation library. A
+little library that can be used for either fun or other research. But
+I am not overly happy with it -- I wish it were more accurate.
 
-There is a minor problem though: being able to simulate something
-means that we need to /understand/ it first. We can do all sorts of
-approximations, but what self-respecting developer would settle for
-that?! Not me, that's for sure! Hence this document.
+So, what do we want to do with this document? We want to find a
+formula; A formula that I can use to accurate model a spanking!
+Something I can plug into my simulation library; something that anyone
+can use.
 
 Now let the hunt begin!
 
-* Factors
-Modelling a spanking requires tracking several aspects of the
-spanking. Spanking "factors", if you will, below we have a number of
-aspects that I think we will need to keep track of and
-implementations of functions we could use to model the properties of
-each:
+* Components
+Modelling a spanking requires tracking several individual components
+of the spanking... Spanking "factors", if you will.
+
+Below, we have a number of components we will need to keep track of
+along with some Common Lisp implementations of functions we could use
+to model the properties of each:
 
 ** Kinetic energy of each slap
-The kinetic energy of an individual swat will additively determine how
-much the spankees butt hurts per swat as this energy is transferred
-from the spankers hand or implement to the spankees butt. Simple
-physics follows if you wish to follow along the concepts:
+The force of an individual swat will additively determine how much the
+spankees butt hurts, as each swat's energy is transferred from the
+spankers hand or implement to the spankees butt.
 
 [[http://en.wikipedia.org/wiki/Kinetic_energy][Kinetic energy]] can be defined as:
 
@@ -45,8 +46,9 @@ A function modelling this would be:
 #+RESULTS:
 : KINETIC-ENERGY
 
-Mass is easy peasy, you just take the weight of the implement,
-velocity requires a teeny bit of research:
+The mass of each slap is equal to the amount of weight that it can
+move, whereas the velocity is how fast the hand or implement is
+moving.
 
 I could not find any sources online that measure the average person's
 slap, but there is a ton of information on punching and
@@ -60,8 +62,17 @@ black belt with a speed of 46 feet per second, with a 1 1/2 pound
 hand, and a force of 2,800 newtons. We won't use that speed since the
 air resistance of an open palm is more than it is for a chop, and most
 spankers aren't black-belts in karate, so it would be unrealistic
-except for as a hypothetical mind-game. We /will/, however, use the
-weight of that hand.
+except for as a hypothetical mind-game.
+
+Also, according to [[https://drive.google.com/file/d/0BzqnGkfQdjftcllBdy0tVG80Ync/view?usp=sharing][this paper]] (Also [[file:./Strength.pdf][saved locally]] in case that goes
+offline.), the downward press ranges for pushing at 120 degrees down
+(To their lap, the direction force is used for OTK spanking after
+impact) would be:
+
+#+TBLNAME: downward-press-weight
+| Weak (<5%) | Average (5%-95%) | Strong (>%95) | Standard Deviation |
+|------------+------------------+---------------+--------------------|
+|         24 |               60 |           124 |                 24 |
 
 So!
 
@@ -92,47 +103,16 @@ convert 20 feet to meters.
 #+RESULTS: beginner
 : 6.0
 
-*** Hand spanking base
-Plugging the above figures into our function above give us:
-#+NAME: hand-energy-base
-#+BEGIN_SRC lisp :exports both :var mass=hand-mass velocity=beginner
-  (kinetic-energy mass velocity)
-#+END_SRC
-
-#+RESULTS: hand-energy-base
-: 12.15
-
-That means that a fully wound-up chop from a beginner would have 12
-Joules of energy on its own. That isn't a lot, but it accounts for
-only the weight of the hand, and not the full force of the student's
-muscles... This is simply a base number to add to the real deal. This
-is probably about the approximate energy for the base of a single
-spank if the spanker was going all out for a single slap. This speed
-would scale according to how much effort the spanker was putting into
-the spanking, but since this is another factor, this will be accounted
-for later.
-
-The average human can push quite a lot of weight, but the range is
-also massive. That naturally means that the power of a spanking will
-vary a lot too, according to [[https://drive.google.com/viewerng/viewer?url=http://www.google.ca/url?url%3Dhttp://www.theergonomicscenter.com/graphics/Workstation%252520Design/Strength.pdf%26rct%3Dj%26q%3D%26esrc%3Ds%26sa%3DU%26ei%3DfduPVN7vKYr3yQTl04HYCw%26ved%3D0CBMQFjAA%26sig2%3D2uA2YAHBJPqTlgAaRNLWvA%26usg%3DAFQjCNFBECtfC-kCmkffo5JaqX3kuz3dUw][this paper]] (Also [[file:./Strength.pdf][saved locally]] in case
-that goes offline.), the downward press ranges for pushing at 120
-degrees down (To their lap, the direction force is used for OTK
-spanking after impact) would be:
-
-#+TBLNAME: downward-press-weight
-| Weak (<5%) | Average (5%-95%) | Strong (>%95) | Standard Deviation |
-|------------+------------------+---------------+--------------------|
-|         24 |               60 |           124 |                 24 |
-
-Since the study was in pounds, lets convert that to a list in Kgs:
-#+NAME: downward-press-mass
+Also, since the force study was in pounds, lets convert that to a list
+in Kgs:
+#+NAME: press-mass
 #+BEGIN_SRC lisp :exports both :var pounds=downward-press-weight
   (mapcar (lambda (row)
             (mapcar (lambda (x) (* x 0.45)) row))
           pounds)
 #+END_SRC
 
-#+RESULTS: downward-press-mass
+#+RESULTS: press-mass
 | 10.799999 | 27.0 | 55.8 | 10.799999 |
 
 So, we have enough force to move 27Kg on average when someone is
@@ -140,77 +120,22 @@ pushing down to their lap, a weak spanker could push an extra 10Kg,
 and a super-buff steroid-induced rump-destroyer could push another
 55.8 Kg.
 
-So, lets make this a function that adds both the base and the
-additional kinetic energy.
-#+BEGIN_SRC lisp :exports both :tangle yes
-  (defun swat-energy (mass push-force velocity)
-    "Returns (In Joules) the energy of an individual slap in a spanking
-  given the mass of the implement (In Kilograms), the force that the
-  spanker can push down into their lap, or rather, the weight that it
-  would feel like on their lap (In kilograms) and the velocity of the
-  slap (In m/s). If you wish to plug in your own push force, you can put
-  a bathroom scale on your lap and push down as hard as you can on it
-  while sitting down."
-    (+ (kinetic-energy mass velocity)
-       (kinetic-energy push-force velocity)))
+*** Hand spanking kinetic energy
+Plugging the above figures into our function above give us:
+#+NAME: hand-energy
+#+BEGIN_SRC lisp :exports both :var mass=press-mass velocity=beginner
+  (mapcar (lambda (mass) (kinetic-energy mass velocity)) (first mass))
 #+END_SRC
 
-#+RESULTS:
-: SWAT-ENERGY
-
-Plugging that all into the above formula and adding the base, we get:
-#+NAME: slap-energy
-#+BEGIN_SRC lisp :exports both :var force=downward-press-mass hand=hand-mass velocity=beginner
-  (mapcar (lambda (row)
-            (mapcar (lambda (force) (swat-energy hand force velocity)) row))
-          force)
-#+END_SRC
-
-#+RESULTS: slap-energy
-| 206.54999 | 498.15 | 1016.55 | 206.54999 |
+#+RESULTS: hand-energy
+| 194.4 | 486.0 | 1004.39996 | 194.4 |
 
 Now that's one heck of a range, with the weakest spanker only capable
-of smacking with just over 200 Joules of energy, and with the hardest
-spanking with a force of over 1000 Joules. This is no punch; the
-target isn't in front of you, the target isn't capable of moving
-downwards, so you can certainly exert a lot of force.
+of smacking with just under 200 Joules of energy, and with the hardest
+spanking with a force of over 1000 Joules.
 
 Of course, our average spankers can spank with a reasonable ~500
 Joules of force with a standard deviation of around 200 Joules.
-
-** The weight of the implement				     :implement:moot:
-Of course, the amount of energy delivered by a spanking from a heavy
-paddle is much different from a hand, lets see what happens if we
-replace the hand with a quarter-kilogram paddle:
-
-#+BEGIN_SRC lisp :exports both :var force=downward-press-mass hand=hand-mass paddle=0.25 velocity=beginner
-  (mapcar (lambda (row)
-            (mapcar (lambda (force)
-                      (swat-energy (+ hand paddle) force velocity)) row))
-          force)
-#+END_SRC
-
-#+RESULTS:
-| 211.04999 | 502.65 | 1021.05 | 211.04999 |
-
-That is a surprisingly small amount of extra force, but I suppose it
-makes sense since heavier hands don't really hurt /that/ much more. It
-would also explain why a paddle with holes in it hurts more than a
-solid paddle: because there is less resistance to the paddle
-accelerating into the spankees behind rather than simply less weight.
-
-The real source of all the pain of a spanking is ultimately the
-strength of the spanker.
-
-I guess that means that the extra energy comes from the wrist action!
-But that renders the above essentially moot.
-
-** TODO Wrist action if there is an implement			  :implement:
-The [[http://en.wikipedia.org/wiki/Angular_momentum][angular momentum]] of the implement is likely what makes a spanking
-with an implement so much worse. The implement is moving on its own at
-a much faster rate than the arm of the spanker, it also has it's own
-weight added to the kinetic energy twofold because of the speed of the
-arm's movement, an the speed the implement is swinging.
 
 * Metadata 							   :noexport:
 #  LocalWords: LocalWords tex blackbelt acc Kgs TBLNAME
