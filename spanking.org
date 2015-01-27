@@ -38,8 +38,8 @@ the implement, and =v= is the velocity of said implement.
 A function modelling this would be:
 #+BEGIN_SRC lisp :tangle yes :exports code :padline no
   (defun kinetic-energy (mass velocity)
-    "Simply returns the kinetic energy (In Joules) for a passed in
-  mass (In Kg) and a passed in velocity. (In meters per second)"
+    "Returns the kinetic energy (In Joules) for a passed in mass (In Kg)
+  and a passed in velocity. (In meters per second)"
     (* (* 0.5 mass) (expt velocity 2)))
 #+END_SRC
 
@@ -65,8 +65,8 @@ spankers aren't black-belts in karate, so it would be unrealistic
 except for as a hypothetical mind-game.
 
 Also, according to [[https://drive.google.com/file/d/0BzqnGkfQdjftcllBdy0tVG80Ync/view?usp=sharing][this paper]] (Also [[file:./Strength.pdf][saved locally]] in case that goes
-offline.), the downward press ranges for pushing at 120 degrees down
-(To their lap, the direction force is used for OTK spanking after
+offline.), the downward press ranges for humans pushing at 120 degrees
+down (To their lap, the direction force is used for OTK spanking after
 impact) would be:
 
 #+TBLNAME: downward-press-weight
@@ -106,19 +106,17 @@ convert 20 feet to meters.
 Also, since the force study was in pounds, lets convert that to a list
 in Kgs:
 #+NAME: press-mass
-#+BEGIN_SRC lisp :exports both :var pounds=downward-press-weight
-  (mapcar (lambda (row)
-            (mapcar (lambda (x) (* x 0.45)) row))
-          pounds)
+#+BEGIN_SRC lisp :exports both :var weight=downward-press-weight
+  (mapcar (lambda (x) (* x 0.45)) (first weight))
 #+END_SRC
 
 #+RESULTS: press-mass
 | 10.799999 | 27.0 | 55.8 | 10.799999 |
 
 So, we have enough force to move 27Kg on average when someone is
-pushing down to their lap, a weak spanker could push an extra 10Kg,
-and a super-buff steroid-induced rump-destroyer could push another
-55.8 Kg.
+pushing down to their lap, a weak spanker could push around 10Kg, and
+a super-buff steroid-induced rump-destroyer could push 55.8
+Kg. (Ouch!)
 
 *** Hand spanking kinetic energy
 Plugging the above figures into our function above give us:
@@ -136,6 +134,23 @@ spanking with a force of over 1000 Joules.
 
 Of course, our average spankers can spank with a reasonable ~500
 Joules of force with a standard deviation of around 200 Joules.
+
+** Concentration of force
+Another component of the pain a spankee feels when being spanked is
+the surface area of where the spanking takes place. Ultimately, the
+same amount of work will be done to the buttocks, but it will be
+spread out the surface area of the spanking area.
+
+This is why thinner implements are more "stingy" and larger implements
+are more "thuddy".
+
+To determine the amount of kinetic energy being exerted per m^2, we
+can divide the total force by the surface area to get how many
+Netwons of force that will be exerted on that surface area:
+
+\begin{equation}
+F = E_k / A
+\end{equation}
 
 * Metadata 							   :noexport:
 #  LocalWords: LocalWords tex blackbelt acc Kgs TBLNAME
